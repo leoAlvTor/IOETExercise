@@ -20,6 +20,16 @@ cd IOETExercise
 python main.py
 ```
 
+#### 4. Run test cases:
+- Test case for FileUtility Class.
+```
+python -m unittest test_cases/file_utility_test_cases.py -v
+```
+- Test case for Payment Class.
+```
+python -m unittest test_cases/payment_test_cases.py -v
+```
+
 ### Solution Overview:
 The company ACME offers their employees the flexibility to work the hours they want. They will pay for the hours worked
 based on the day of the week and time of day, according to the following table:
