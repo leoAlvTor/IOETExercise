@@ -5,7 +5,7 @@ from utilities.file_utility import FileUtility
 class MyTestCase(unittest.TestCase):
 
     # Please, change the path!
-    file_utility = FileUtility('/home/leo/PycharmProjects/IOETExercise/ACME payment.txt')
+    file_utility = FileUtility('ACME.txt')
 
     def test_check_file_exists(self):
         self.assertEqual(self.file_utility.check_file_exists(), True)

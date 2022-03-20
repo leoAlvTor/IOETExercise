@@ -69,7 +69,7 @@ class PaymentTestCase(unittest.TestCase):
                               ([0, 24], 10))
 
     def test_calculate_hour_price(self):
-        # Please refer to 'ACME payment.txt' file
+        # Please refer to 'ACME.txt' file
 
         # Test case for Mario, cumulative value is = 320
         self.assertEqual(self.payment_object.calculate_salary_per_hours(day='TU', start_time=8, end_time=18),
