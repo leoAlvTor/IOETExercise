@@ -1,6 +1,7 @@
 import os.path
 from datetime import datetime as dt
 import re
+from utilities.constants import Constants
 
 
 class Payment:
@@ -9,9 +10,10 @@ class Payment:
     """
     user_input: str
     user_name: str
+    salary_record: str
 
-    WEEK_DAYS: list = ['MO', 'TU', 'WE', 'TH', 'FR']
-    TIME_FORMAT: str = '%H:%M'
+    WEEK_DAYS: list = Constants.WEEK_DAYS
+    TIME_FORMAT: str = Constants.TIME_FORMAT
 
     week_time_hours: dict = {
         '00:01-09:00': [],
@@ -19,15 +21,11 @@ class Payment:
         '18:01-00:00': []
     }
 
-    week_time_payment: dict = {
-        '00:01-09:00': 25,
-        '09:01-18:00': 15,
-        '18:01-00:00': 20,
-    }
+    WEEK_TIME_PAYMENT: dict = Constants.WEEK_TIME_PAYMENT
 
-    WEEKEND_BONUS: int = 5
-    FULL_WEEKEND_DAY_SALARY = 600
-    FULL_WEEK_DAY_SALARY = 480
+    WEEKEND_BONUS: int = Constants.WEEKEND_BONUS
+    FULL_WEEKEND_DAY_SALARY = Constants.FULL_WEEKEND_DAY_SALARY
+    FULL_WEEK_DAY_SALARY = Constants.FULL_WEEK_DAY_SALARY
 
     def __init__(self, user_input: str):
         """
@@ -39,9 +37,9 @@ class Payment:
             The user input as string. It contains the username and its worked hour/s.
         """
         self.__init_week_time_hours_dict()
-        self.regular_expression = re.compile('[A-Z]+[0-9]+[0-9]+:[0-9]+-[0-9]+:[0-9]+')
+        self.salary_integrity_regex = re.compile(Constants.SALARY_INTEGRITY_REGEX)
         self.user_input = user_input
-        self.user_name = user_input.split('=')[0]
+        self.user_name, self.salary_record = user_input.split('=')[0], user_input.split('=')[1]
 
     def __init_week_time_hours_dict(self):
         """
@@ -53,7 +51,7 @@ class Payment:
             self.week_time_hours[key] = [dt.strptime(split_hours[0], self.TIME_FORMAT).hour,
                                          dt.strptime(split_hours[1], self.TIME_FORMAT).hour]
 
-    def get_worked_days(self) -> list:
+    def get_worked_days(self, salary_record=None) -> list:
         """
         Extracts all worked days based on the next statement using regex and stores it in a list:
 
@@ -66,9 +64,12 @@ class Payment:
         list
             A list of strings containing worked days.
         """
-        return self.regular_expression.findall(self.user_input.split('=')[1])
+        if salary_record is not None:
+            return self.salary_integrity_regex.findall(salary_record)
+        else:
+            return self.salary_integrity_regex.findall(self.salary_record)
 
-    def get_hours_from_string(self, hours: list) -> tuple:
+    def get_hours_from_string(self, hours: list[str]) -> tuple:
         """
         Parse each string in a list to time instances. Then extract their hour from each instance.
 
@@ -113,7 +114,7 @@ class Payment:
         """
         return day in self.WEEK_DAYS + ['SA', 'SU']
 
-    def check_hours_validity(self, start_end_pair: list, end_time: int) -> tuple:
+    def check_hours_validity(self, start_end_pair: list[int], end_time: int) -> tuple:
         """
         Check hours' validity for example if end_hour is 0 then it becomes 24 (the end of the day).
 
@@ -156,12 +157,12 @@ class Payment:
         Returns
         -------
         float
-            A float number in representation of the salary of the worked hours.
+            A float number in representation of the worked hours.
         """
         price = 0
         for key, value in self.week_time_hours.items():
             value, end_time = self.check_hours_validity(value, end_time)
-            week_payment = self.week_time_payment.get(key) if day in self.WEEK_DAYS else self.week_time_payment.get(
+            week_payment = self.WEEK_TIME_PAYMENT.get(key) if day in self.WEEK_DAYS else self.WEEK_TIME_PAYMENT.get(
                 key) + self.WEEKEND_BONUS
             if start_time >= value[0] and end_time <= value[1]:
                 return (end_time - start_time) * week_payment
@@ -235,7 +236,7 @@ class Payment:
                      + self.calculate_salary_per_hours(self.get_next_day(day), 0, end_hour)
             return salary
 
-    def calculate_salary(self, worked_days: list) -> float:
+    def calculate_salary(self, worked_days: list[str]) -> float:
         """
         Determines how the salary will be calculated considering special cases.
 
@@ -268,10 +269,10 @@ class Payment:
         for element in worked_days:
             day, hours = element[0:2], element[2:].split('-')
             start_hour, end_hour = self.get_hours_from_string(hours)
-            if start_hour > end_hour:
-                salary += self.calculate_whole_day(is_weekend=False, day=day, start_hour=start_hour, end_hour=end_hour)
-            elif (start_hour == end_hour and day not in ['FR', 'SA', 'SU']) or (start_hour == end_hour == 0 and day == 'FR'):
+            if (start_hour == end_hour and day not in ['FR', 'SA', 'SU']) or (start_hour == end_hour == 0 and day == 'FR'):
                 salary += self.FULL_WEEK_DAY_SALARY
+            elif start_hour > end_hour:
+                salary += self.calculate_whole_day(is_weekend=False, day=day, start_hour=start_hour, end_hour=end_hour)
             elif start_hour == end_hour:
                 salary += self.calculate_whole_day(is_weekend=True, day=day, start_hour=start_hour, end_hour=end_hour)
             else:
@@ -293,24 +294,3 @@ class Payment:
             The generated string containing the username and salary.
         """
         return f'The amount to pay {self.user_name} is: {salary} USD'
-
-    @staticmethod
-    def open_file(file_name: str = 'ACME payment.txt') -> list:
-        """
-        Opens a file and reads all its lines.
-
-        Parameters
-        ----------
-        file_name: str
-            The file name, by default it will be 'ACME payment.txt'
-
-        Returns
-        -------
-        list
-            A list of strings read from the file
-        """
-        if not os.path.exists(file_name):
-            raise Exception(f'File not found!, file name: {file_name}')
-        with open(file_name, 'r') as file:
-            file_text = str.upper(''.join(file.readlines())).split('\n')
-            return file_text
